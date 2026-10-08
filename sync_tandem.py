@@ -38,20 +38,19 @@ def run_sync():
     login_resp.raise_for_status()
     login_data = login_resp.json()
 
-    # Estrazione del token gestendo strutture sia piatte che annidate
+    # Estrazione del token specifico da 'auth' -> 'token'
     aircare_token = None
     if isinstance(login_data, dict):
-        aircare_token = (
-            login_data.get("token") or 
-            login_data.get("access_token") or
-            (login_data.get("data", {}).get("token") if isinstance(login_data.get("data"), dict) else None) or
-            (login_data.get("data") if isinstance(login_data.get("data"), str) else None)
-        )
+        auth_obj = login_data.get("auth")
+        if isinstance(auth_obj, dict):
+            aircare_token = auth_obj.get("token")
+        if not aircare_token:
+            aircare_token = login_data.get("token") or login_data.get("access_token")
 
     if not aircare_token:
         raise Exception(f"Token non trovato nella risposta di login: {login_data}")
 
-    print("Token AirCare ottenuto con successo!")
+    print("Token AirCare estratto con successo!")
 
     # 2. Recupero dati da AirCare
     print("2/4 Estrazione telemetria da AirCare...")
