@@ -2,7 +2,7 @@ name: AirCare to Tandem Pipeline
 
 on:
   schedule:
-    - cron: '*/15 * * * *'  # Esegue la sincronizzazione ogni 15 minuti
+    - cron: '*/3 * * * *'  # Esegue la sincronizzazione ogni 15 minuti
   workflow_dispatch:        # Consente l'avvio manuale dal pannello GitHub
 
 jobs:
