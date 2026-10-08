@@ -5,10 +5,9 @@ import urllib3
 # Disabilita gli avvisi di sicurezza relativi al certificato SSL di AirCare
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-# Recupero delle credenziali coperte da segreto nei Secrets di GitHub
 AIRCARE_LOGIN_URL = os.environ.get("AIRCARE_LOGIN_URL")
 AIRCARE_LASTDATA_URL = os.environ.get("AIRCARE_LASTDATA_URL")
-AIRCARE_USERNAME = os.environ.get("AIRCARE_USERNAME")  # La tua email di AirCare
+AIRCARE_USERNAME = os.environ.get("AIRCARE_USERNAME")
 AIRCARE_PASSWORD = os.environ.get("AIRCARE_PASSWORD")
 
 APS_CLIENT_ID = os.environ.get("APS_CLIENT_ID")
@@ -23,7 +22,7 @@ def run_sync():
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
     }
 
-    # 1. Login ad AirCare (inviamo sia 'email' che 'username' per compatibilità)
+    # 1. Login ad AirCare
     print("1/4 Autenticazione su AirCare...")
     login_resp = requests.post(
         AIRCARE_LOGIN_URL,
@@ -38,14 +37,31 @@ def run_sync():
     )
     login_resp.raise_for_status()
     login_data = login_resp.json()
-    aircare_token = login_data.get("token") or login_data.get("access_token")
+
+    # Estrazione del token gestendo strutture sia piatte che annidate
+    aircare_token = None
+    if isinstance(login_data, dict):
+        aircare_token = (
+            login_data.get("token") or 
+            login_data.get("access_token") or
+            (login_data.get("data", {}).get("token") if isinstance(login_data.get("data"), dict) else None) or
+            (login_data.get("data") if isinstance(login_data.get("data"), str) else None)
+        )
+
+    if not aircare_token:
+        raise Exception(f"Token non trovato nella risposta di login: {login_data}")
+
+    print("Token AirCare ottenuto con successo!")
 
     # 2. Recupero dati da AirCare
     print("2/4 Estrazione telemetria da AirCare...")
+    auth_header_val = aircare_token if aircare_token.startswith("Bearer ") else f"Bearer {aircare_token}"
+    
     headers_aircare = {
-        "Authorization": f"Bearer {aircare_token}",
+        "Authorization": auth_header_val,
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
     }
+    
     data_resp = requests.get(
         AIRCARE_LASTDATA_URL,
         headers=headers_aircare,
@@ -99,7 +115,7 @@ def run_sync():
     )
     tandem_resp.raise_for_status()
 
-    print("Sincronizzazione completata con successo!")
+    print("Sincronizzazione completata con successo su Autodesk Tandem!")
 
 if __name__ == "__main__":
     run_sync()
