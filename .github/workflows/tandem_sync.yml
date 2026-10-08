@@ -1,0 +1,33 @@
+name: AirCare to Tandem Pipeline
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'  # Esegue la sincronizzazione ogni 15 minuti
+  workflow_dispatch:        # Consente l'avvio manuale dal pannello GitHub
+
+jobs:
+  sync_data:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout del codice
+        uses: actions/checkout@v4
+
+      - name: Configurazione Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Installazione librerie
+        run: pip install requests urllib3
+
+      - name: Esecuzione script ETL
+        env:
+          AIRCARE_LOGIN_URL: ${{ secrets.AIRCARE_LOGIN_URL }}
+          AIRCARE_LASTDATA_URL: ${{ secrets.AIRCARE_LASTDATA_URL }}
+          AIRCARE_USERNAME: ${{ secrets.AIRCARE_USERNAME }}
+          AIRCARE_PASSWORD: ${{ secrets.AIRCARE_PASSWORD }}
+          APS_CLIENT_ID: ${{ secrets.APS_CLIENT_ID }}
+          APS_CLIENT_SECRET: ${{ secrets.APS_CLIENT_SECRET }}
+          TANDEM_STREAM_URL: ${{ secrets.TANDEM_STREAM_URL }}
+        run: python sync_tandem.py
