@@ -149,6 +149,46 @@ def run_sync():
         )
         tandem_resp_095.raise_for_status()
         print("Sincronizzazione 095 completata con successo!")
+        # === NUOVA SEZIONE: INVIO DATI A GRAFANA CLOUD ===
+    GRAFANA_URL = os.environ.get("GRAFANA_URL")
+    GRAFANA_USER = os.environ.get("GRAFANA_USER")
+    GRAFANA_TOKEN = os.environ.get("GRAFANA_TOKEN")
+
+    if GRAFANA_URL and GRAFANA_USER and GRAFANA_TOKEN:
+        print("5/5 Invio metriche a Grafana Cloud...")
+        
+        # Adattiamo l'URL per permettere l'invio in formato testo (Influx Line Protocol)
+        grafana_write_url = GRAFANA_URL.replace('/api/prom/push', '/api/v1/push/influx/write')
+        
+        line_protocol_data = []
+        
+        # Formattazione dati per il sensore 086
+        if len(payload_086) > 1:
+            fields = [f"{k}={v}" for k, v in payload_086.items() if k != "timestamp"]
+            ts_ns = payload_086["timestamp"] * 1000000000 # Il database richiede il tempo in nanosecondi
+            line_protocol_data.append(f"aircare,device=Digitalis_086_IAQ {','.join(fields)} {ts_ns}")
+            
+        # Formattazione dati per il sensore 095
+        if len(payload_095) > 1:
+            fields = [f"{k}={v}" for k, v in payload_095.items() if k != "timestamp"]
+            ts_ns = payload_095["timestamp"] * 1000000000 # Il database richiede il tempo in nanosecondi
+            line_protocol_data.append(f"aircare,device=Digitalis_095_IAQ {','.join(fields)} {ts_ns}")
+            
+        # Spedizione del pacchetto a Grafana
+        if line_protocol_data:
+            grafana_payload = "\n".join(line_protocol_data)
+            try:
+                grafana_resp = requests.post(
+                    grafana_write_url,
+                    auth=(GRAFANA_USER, GRAFANA_TOKEN),
+                    data=grafana_payload,
+                    headers={'Content-Type': 'text/plain'},
+                    timeout=15
+                )
+                grafana_resp.raise_for_status()
+                print("Sincronizzazione Grafana completata con successo!")
+            except Exception as e:
+                print(f"Errore durante l'invio a Grafana: {e}")
 
 if __name__ == "__main__":
     run_sync()
