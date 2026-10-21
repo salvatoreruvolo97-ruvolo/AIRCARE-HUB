@@ -70,24 +70,38 @@ def run_sync():
     data_resp.raise_for_status()
     raw_data = data_resp.json().get("data", [])
 
-    # 3. Filtraggio e normalizzazione del sensore Digitalis_086_IAQ
-    payload = {"timestamp": 0}
+    # 3. Filtraggio e normalizzazione per ENTRAMBI i sensori
+    payload_086 = {"timestamp": 0}
+    payload_095 = {"timestamp": 0}
+
     for item in raw_data:
-        if item.get("device") == TARGET_DEVICE:
+        device_name = item.get("device")
+        
+        # Se i dati sono del sensore 086
+        if device_name == "Digitalis_086_IAQ":
             resource = item.get("resource")
             val = item.get("value")
             checktime = item.get("checktime", 0)
-
             key = "CO2" if resource == "Co2" else resource
-            payload[key] = val
+            payload_086[key] = val
+            if checktime > payload_086["timestamp"]:
+                payload_086["timestamp"] = checktime
 
-            if checktime > payload["timestamp"]:
-                payload["timestamp"] = checktime
+        # Se i dati sono del sensore 095
+        elif device_name == "Digitalis_095_IAQ":
+            resource = item.get("resource")
+            val = item.get("value")
+            checktime = item.get("checktime", 0)
+            key = "CO2" if resource == "Co2" else resource
+            payload_095[key] = val
+            if checktime > payload_095["timestamp"]:
+                payload_095["timestamp"] = checktime
 
-    if len(payload) <= 1:
-        raise Exception(f"Nessun dato trovato per il dispositivo {TARGET_DEVICE}")
+    if len(payload_086) <= 1 and len(payload_095) <= 1:
+        raise Exception("Nessun dato trovato per i dispositivi specificati.")
 
-    print(f"Payload preparato per {TARGET_DEVICE}:", payload)
+    print(f"Payload 086: {payload_086}")
+    print(f"Payload 095: {payload_095}")
 
     # 4. Richiesta Token ad Autodesk Platform Services (APS)
     print("3/4 Richiesta Token OAuth ad Autodesk Platform Services...")
@@ -100,21 +114,35 @@ def run_sync():
     aps_resp.raise_for_status()
     aps_token = aps_resp.json()["access_token"]
 
-    # 5. Invio dati allo Stream di Autodesk Tandem
+    # 5. Invio dati agli Stream di Autodesk Tandem
     print("4/4 Invio payload ad Autodesk Tandem...")
     tandem_headers = {
         "Content-Type": "application/json",
         "Authorization": f"Bearer {aps_token}"
     }
-    tandem_resp = requests.post(
-        TANDEM_STREAM_URL,
-        json=payload,
-        headers=tandem_headers,
-        timeout=15
-    )
-    tandem_resp.raise_for_status()
 
-    print("Sincronizzazione completata con successo su Autodesk Tandem!")
+    # Invio per il sensore 086 (se ci sono dati)
+    if len(payload_086) > 1:
+        tandem_resp_086 = requests.post(
+            TANDEM_STREAM_URL,
+            json=payload_086,
+            headers=tandem_headers,
+            timeout=15
+        )
+        tandem_resp_086.raise_for_status()
+        print("Sincronizzazione 086 completata con successo!")
+
+    # Invio per il sensore 095 (se ci sono dati)
+    TANDEM_STREAM_URL_095 = os.environ.get("TANDEM_STREAM_URL_095")
+    if len(payload_095) > 1 and TANDEM_STREAM_URL_095:
+        tandem_resp_095 = requests.post(
+            TANDEM_STREAM_URL_095,
+            json=payload_095,
+            headers=tandem_headers,
+            timeout=15
+        )
+        tandem_resp_095.raise_for_status()
+        print("Sincronizzazione 095 completata con successo!")
 
 if __name__ == "__main__":
     run_sync()
