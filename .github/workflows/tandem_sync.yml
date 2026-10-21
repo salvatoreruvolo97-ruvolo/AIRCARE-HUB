@@ -30,4 +30,5 @@ jobs:
           APS_CLIENT_ID: ${{ secrets.APS_CLIENT_ID }}
           APS_CLIENT_SECRET: ${{ secrets.APS_CLIENT_SECRET }}
           TANDEM_STREAM_URL: ${{ secrets.TANDEM_STREAM_URL }}
+          TANDEM_STREAM_URL_095: ${{ secrets.TANDEM_STREAM_URL_095 }}
         run: python sync_tandem.py
