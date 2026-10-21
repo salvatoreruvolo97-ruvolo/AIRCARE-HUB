@@ -31,4 +31,7 @@ jobs:
           APS_CLIENT_SECRET: ${{ secrets.APS_CLIENT_SECRET }}
           TANDEM_STREAM_URL: ${{ secrets.TANDEM_STREAM_URL }}
           TANDEM_STREAM_URL_095: ${{ secrets.TANDEM_STREAM_URL_095 }}
+          GRAFANA_URL: ${{ secrets.GRAFANA_URL }}
+          GRAFANA_USER: ${{ secrets.GRAFANA_USER }}
+          GRAFANA_TOKEN: ${{ secrets.GRAFANA_TOKEN }}
         run: python sync_tandem.py
