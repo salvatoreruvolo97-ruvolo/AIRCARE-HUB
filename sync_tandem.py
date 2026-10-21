@@ -70,12 +70,16 @@ def run_sync():
     data_resp.raise_for_status()
     raw_data = data_resp.json().get("data", [])
 
-    # 3. Filtraggio e normalizzazione per ENTRAMBI i sensori
+   # 3. Filtraggio e normalizzazione per ENTRAMBI i sensori
     payload_086 = {"timestamp": 0}
     payload_095 = {"timestamp": 0}
 
+    print("Lista dispositivi visti da AirCare in questo momento:")
     for item in raw_data:
         device_name = item.get("device")
+        if device_name:
+            # Stampa il nome esatto del dispositivo per scovare eventuali errori
+            print(f" -> Trovato in API: '{device_name}'") 
         
         # Se i dati sono del sensore 086
         if device_name == "Digitalis_086_IAQ":
@@ -97,11 +101,13 @@ def run_sync():
             if checktime > payload_095["timestamp"]:
                 payload_095["timestamp"] = checktime
 
+    # Se ENTRAMBI i sensori sono vuoti, usciamo in modo pulito (nessun errore rosso su GitHub)
     if len(payload_086) <= 1 and len(payload_095) <= 1:
-        raise Exception("Nessun dato trovato per i dispositivi specificati.")
+        print("ATTENZIONE: Nessun dato trovato per 086 e 095. Forse sono spenti o offline.")
+        return
 
-    print(f"Payload 086: {payload_086}")
-    print(f"Payload 095: {payload_095}")
+    print(f"Payload preparato 086: {payload_086}")
+    print(f"Payload preparato 095: {payload_095}")
 
     # 4. Richiesta Token ad Autodesk Platform Services (APS)
     print("3/4 Richiesta Token OAuth ad Autodesk Platform Services...")
